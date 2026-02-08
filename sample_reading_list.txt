@@ -1,0 +1,46 @@
+# Sample Philosophy Reading List
+# Use this file to test LIBRIS document upload feature
+
+## Ancient Philosophy
+
+The Republic - Plato - 380 BC
+Themes: Justice, ideal state, philosopher-kings
+
+Nicomachean Ethics - Aristotle - 350 BC
+Themes: Virtue ethics, eudaimonia, golden mean
+
+Meditations - Marcus Aurelius - 170 AD
+Themes: Stoicism, self-discipline, ethics
+
+## Medieval Philosophy
+
+Confessions - Augustine of Hippo - 397 AD
+Themes: Autobiography, theology, philosophy of time
+
+Summa Theologica - Thomas Aquinas - 1274
+Themes: Natural law, theology, metaphysics
+
+The Incoherence of the Philosophers - Al-Ghazali - 1095
+Themes: Islamic philosophy, skepticism, causation
+
+## Modern Philosophy
+
+Discourse on Method - René Descartes - 1637
+Themes: Rationalism, methodological doubt, cogito
+
+An Essay Concerning Human Understanding - John Locke - 1689
+Themes: Empiricism, theory of mind, political philosophy
+
+Critique of Pure Reason - Immanuel Kant - 1781
+Themes: Epistemology, transcendental idealism, metaphysics
+
+## Contemporary Philosophy
+
+Being and Time - Martin Heidegger - 1927
+Themes: Phenomenology, ontology, existentialism
+
+A Theory of Justice - John Rawls - 1971
+Themes: Political philosophy, justice as fairness, social contract
+
+The Second Sex - Simone de Beauvoir - 1949
+Themes: Feminism, existentialism, gender theory
