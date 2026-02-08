@@ -215,7 +215,7 @@ def init_session_state():
 def chat_with_libris(user_message, api_key):
     """Send message to LIBRIS and get response"""
     try:
-        client = anthropic.Anthropic(api_key=api_key)
+        client = anthropic.Anthropic(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)
         
         # Build message history
         messages = st.session_state.messages + [
