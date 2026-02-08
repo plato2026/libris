@@ -4,12 +4,21 @@ Streamlit Web Application for Public Deployment
 
 FREE for the world to use!
 Powered by Anthropic's Claude AI
+
+VERSION 1.1 - Now with PDF and Word Document Support!
 """
 
 import streamlit as st
 import anthropic
 import os
 from datetime import datetime
+
+# ============================================================================
+# NEW: Import libraries for PDF and Word document processing
+# ============================================================================
+from pypdf import PdfReader
+from docx import Document
+import io
 
 # ============================================================================
 # PAGE CONFIGURATION
@@ -77,6 +86,112 @@ SPECIAL FEATURES:
 
 REMEMBER: You're helping make knowledge accessible to the world. Be helpful, educational, and inclusive of all intellectual traditions.
 """
+
+# ============================================================================
+# NEW: Document Processing Functions
+# ============================================================================
+
+def extract_text_from_pdf(uploaded_file):
+    """
+    Extract text from a PDF file.
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object
+        
+    Returns:
+        str: Extracted text from the PDF
+    """
+    try:
+        # Read PDF
+        pdf_reader = PdfReader(uploaded_file)
+        
+        # Extract text from all pages
+        text = ""
+        for page_num, page in enumerate(pdf_reader.pages, 1):
+            page_text = page.extract_text()
+            if page_text:
+                text += f"\n--- Page {page_num} ---\n"
+                text += page_text
+        
+        if not text.strip():
+            return "⚠️ Could not extract text from PDF. The PDF might be image-based or encrypted."
+        
+        return text
+    
+    except Exception as e:
+        return f"⚠️ Error reading PDF: {str(e)}"
+
+
+def extract_text_from_docx(uploaded_file):
+    """
+    Extract text from a Word document (.docx).
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object
+        
+    Returns:
+        str: Extracted text from the document
+    """
+    try:
+        # Read Word document
+        doc = Document(uploaded_file)
+        
+        # Extract text from all paragraphs
+        text = ""
+        for para in doc.paragraphs:
+            if para.text.strip():
+                text += para.text + "\n"
+        
+        # Also extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if cell.text.strip():
+                        text += cell.text + "\n"
+        
+        if not text.strip():
+            return "⚠️ Could not extract text from Word document. The document might be empty."
+        
+        return text
+    
+    except Exception as e:
+        return f"⚠️ Error reading Word document: {str(e)}"
+
+
+def process_uploaded_file(uploaded_file):
+    """
+    Process an uploaded file based on its type.
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object
+        
+    Returns:
+        str: Extracted text content
+    """
+    filename = uploaded_file.name.lower()
+    
+    # PDF files
+    if filename.endswith('.pdf'):
+        return extract_text_from_pdf(uploaded_file)
+    
+    # Word documents
+    elif filename.endswith('.docx'):
+        return extract_text_from_docx(uploaded_file)
+    
+    # Text-based files (txt, md, csv)
+    elif filename.endswith(('.txt', '.md', '.csv')):
+        try:
+            # Try UTF-8 first
+            content = uploaded_file.read().decode('utf-8')
+            return content
+        except UnicodeDecodeError:
+            # Fallback to latin-1
+            uploaded_file.seek(0)  # Reset file pointer
+            content = uploaded_file.read().decode('latin-1')
+            return content
+    
+    else:
+        return f"⚠️ Unsupported file type: {filename}"
 
 # ============================================================================
 # SESSION STATE INITIALIZATION
@@ -227,7 +342,8 @@ def render_sidebar():
         st.markdown("""
         <div style='text-align: center; font-size: 0.8em; color: #64748b;'>
         Made with ❤️ for the world<br>
-        Open source • Free forever
+        Open source • Free forever<br>
+        v1.1 - PDF & Word Support
         </div>
         """, unsafe_allow_html=True)
 
@@ -335,50 +451,73 @@ def main():
                         response = chat_with_libris(f"Search for: {qs}", st.session_state.api_key)
                         st.markdown(response)
     
-    # TAB 2: UPLOAD DOCUMENT
+    # TAB 2: UPLOAD DOCUMENT (UPDATED!)
     with tab2:
         st.markdown("### 📄 Upload Document for Processing")
         
+        # UPDATED: Now accepts PDF and Word documents!
         uploaded_file = st.file_uploader(
             "Choose a file",
-            type=['txt', 'md', 'csv'],
-            help="Upload reading lists, syllabi, bibliographies, or any text-based document"
+            type=['txt', 'md', 'csv', 'pdf', 'docx'],  # UPDATED: Added 'pdf' and 'docx'
+            help="Upload reading lists, syllabi, bibliographies, PDFs, or Word documents"
         )
         
         if uploaded_file is not None:
-            # Read file content
-            content = uploaded_file.read().decode('utf-8')
+            # Process the file based on type
+            with st.spinner(f"Reading {uploaded_file.name}..."):
+                content = process_uploaded_file(uploaded_file)
             
-            st.success(f"✅ File loaded: {uploaded_file.name}")
-            
-            with st.expander("Preview file content"):
-                st.text(content[:1000] + "..." if len(content) > 1000 else content)
-            
-            if st.button("📚 Process Document", type="primary"):
-                with st.spinner(f"Processing {uploaded_file.name}..."):
-                    message = f"I'm uploading a document called '{uploaded_file.name}'. Please process it and extract bibliographic information.\n\nDocument content:\n{content}"
-                    response = chat_with_libris(message, st.session_state.api_key)
-                    
-                    # Store document info
-                    st.session_state.documents.append({
-                        'filename': uploaded_file.name,
-                        'processed_at': datetime.now().isoformat()
-                    })
-                    
-                    st.markdown(response)
+            # Check if extraction was successful
+            if content.startswith("⚠️"):
+                st.warning(content)
+                st.info("💡 **Tip**: For image-based PDFs, try converting to text first using an OCR tool.")
+            else:
+                st.success(f"✅ File loaded: {uploaded_file.name}")
+                
+                # Show file type info
+                if uploaded_file.name.lower().endswith('.pdf'):
+                    st.info("📄 **PDF Document** - Text extracted from all pages")
+                elif uploaded_file.name.lower().endswith('.docx'):
+                    st.info("📝 **Word Document** - Text extracted from paragraphs and tables")
+                
+                with st.expander("Preview file content"):
+                    preview_length = 2000
+                    if len(content) > preview_length:
+                        st.text(content[:preview_length] + f"\n\n... ({len(content) - preview_length} more characters)")
+                    else:
+                        st.text(content)
+                
+                if st.button("📚 Process Document", type="primary"):
+                    with st.spinner(f"Processing {uploaded_file.name}..."):
+                        message = f"I'm uploading a document called '{uploaded_file.name}'. Please process it and extract bibliographic information.\n\nDocument content:\n{content}"
+                        response = chat_with_libris(message, st.session_state.api_key)
+                        
+                        # Store document info
+                        st.session_state.documents.append({
+                            'filename': uploaded_file.name,
+                            'processed_at': datetime.now().isoformat(),
+                            'file_type': uploaded_file.type
+                        })
+                        
+                        st.markdown(response)
         
         st.markdown("---")
         st.markdown("""
         **Supported formats:**
-        - `.txt` - Plain text files
-        - `.md` - Markdown files
-        - `.csv` - CSV files
+        - 📄 `.pdf` - PDF documents (text-based)
+        - 📝 `.docx` - Word documents
+        - 📝 `.txt` - Plain text files
+        - 📝 `.md` - Markdown files
+        - 📊 `.csv` - CSV files
         
         **What to upload:**
-        - Course syllabi
+        - Course syllabi (PDF or Word)
         - Reading lists
         - Bibliographies
+        - Research papers
         - Research notes
+        
+        **Note:** For best results with PDFs, ensure they are text-based (not scanned images).
         """)
     
     # TAB 3: CHAT
